@@ -1,0 +1,129 @@
+---
+description: AbortController for async useEffect, cleanup patterns, race condition prevention
+category: Coding Patterns
+globs: ["**/*.tsx", "**/*.ts"]
+triggers:
+  - "useEffect"
+  - "async"
+  - "await"
+alwaysApply: false
+severity: warn
+---
+
+# Async Effect Patterns
+
+## REQUIRED: AbortController for Async Operations
+
+Every async operation in useEffect MUST have cleanup to prevent:
+- Race conditions
+- State updates on unmounted components
+- Memory leaks
+
+```typescript
+// CRITICAL - Always use this pattern
+useEffect(() => {
+    const controller = new AbortController();
+
+    const fetchData = async () => {
+        try {
+            const result = await api.getData({
+                signal: controller.signal
+            });
+            // Only update state if not aborted
+            setData(result);
+        } catch (err) {
+            // Ignore abort errors, handle others
+            if (!controller.signal.aborted) {
+                setError(err as ApiError);
+            }
+        }
+    };
+
+    fetchData();
+
+    // Cleanup: abort on unmount or dependency change
+    return () => controller.abort();
+}, [dependency]);
+```
+
+## Pattern: Loading States
+
+```typescript
+const [isLoading, setIsLoading] = useState(false);
+const [error, setError] = useState<ApiError | null>(null);
+
+useEffect(() => {
+    const controller = new AbortController();
+
+    const fetchData = async () => {
+        setIsLoading(true);
+        setError(null);
+
+        try {
+            const result = await api.getData({ signal: controller.signal });
+            setData(result);
+        } catch (err) {
+            if (!controller.signal.aborted) {
+                setError(err as ApiError);
+            }
+        } finally {
+            if (!controller.signal.aborted) {
+                setIsLoading(false);
+            }
+        }
+    };
+
+    fetchData();
+    return () => controller.abort();
+}, [dependency]);
+```
+
+## Pattern: Debounced Effects
+
+```typescript
+useEffect(() => {
+    const controller = new AbortController();
+
+    const timeoutId = setTimeout(async () => {
+        try {
+            const result = await api.search(query, {
+                signal: controller.signal
+            });
+            setResults(result);
+        } catch (err) {
+            if (!controller.signal.aborted) {
+                setError(err as ApiError);
+            }
+        }
+    }, 300);
+
+    return () => {
+        clearTimeout(timeoutId);
+        controller.abort();
+    };
+}, [query]);
+```
+
+## Anti-patterns to Avoid
+
+```typescript
+// BAD - No cleanup
+useEffect(() => {
+    fetchData().then(setData);
+}, []);
+
+// BAD - Async function directly (React warning)
+useEffect(async () => {
+    const data = await fetchData();
+    setData(data);
+}, []);
+
+// BAD - Ignoring abort in catch
+useEffect(() => {
+    const controller = new AbortController();
+    fetchData({ signal: controller.signal })
+        .then(setData)
+        .catch(setError); // Will set error on abort!
+    return () => controller.abort();
+}, []);
+```

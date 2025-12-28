@@ -1,0 +1,543 @@
+---
+description: 
+globs: 
+alwaysApply: true
+---
+# Styling Guidelines
+
+This document outlines best practices for creating consistent styled components using the core-oxide library utilities. Following these guidelines ensures visual consistency, proper theming support, and maintainable styling code.
+
+## Import
+
+```tsx
+import styled, { css } from 'styled-components';
+
+import { borderRadiusStyles } from '@sixt-web/core-oxide/src/utils/styles/borderRadius.styles';
+import { OXBiggerThan } from '@sixt-web/core-oxide/src/enums/OXBiggerThan';
+import { color } from '@sixt-web/core-oxide/src/utils/colors';
+import { spacing } from '@sixt-web/core-oxide/src/utils/spacing';
+import { rem } from '@sixt-web/core-oxide/src/utils/units';
+```
+
+## Design System Utilities
+
+Always use the design system utilities for styling rather than hardcoded values.
+
+### Spacing
+
+Use the `spacing()` function for all margin, padding, and gap values. This spacing system provides consistent spacing values throughout the application. All values are in `rem` units for better accessibility.
+See [spacing.ts](mdc:libraries/core/core-oxide/src/utils/spacing.ts) for more reference
+
+#### Spacing Scale
+| Token | Pixels | REM    | Use Case |
+|----|-----|-----|----|
+| 5xs   | 2px    | 0.125  | Minimal spacing, borders |
+| 4xs   | 4px    | 0.25   | Tiny gaps, icon padding |
+| 3xs   | 8px    | 0.5    | Small component spacing |
+| 2xs   | 12px   | 0.75   | Compact component spacing |
+| xs    | 16px   | 1      | Standard component spacing |
+| s     | 20px   | 1.25   | Medium component spacing |
+| m     | 24px   | 1.5    | Default spacing between components |
+| l     | 32px   | 2      | Large section spacing |
+| xl    | 40px   | 2.5    | Extra large section spacing |
+| 2xl   | 48px   | 3      | Major section divisions |
+| 3xl   | 64px   | 4      | Layout spacing |
+| 4xl   | 80px   | 5      | Large layout spacing |
+| 5xl   | 96px   | 6      | Extra large layout spacing |
+| 6xl   | 160px  | 10     | Maximum layout spacing |
+
+
+#### Usage Example
+```tsx
+import styled from 'styled-components';
+
+import { spacing } from '@sixt-web/core-oxide/src/utils/spacing';
+
+// ✅ Do: Use spacing utils for css properties related to spacing
+const Container = styled.div`
+  padding: ${spacing('xs')};
+  margin-bottom: ${spacing('m')};
+  gap: ${spacing('4xs')};
+`;
+
+// ❌ Don't: Use hard-coded values where utils can be used
+const Container = styled.div`
+  padding: 8px;
+  margin-bottom: 16px;
+  gap: 4px;
+`;
+```
+
+### Units
+
+Use the `rem()` function for size values (width, height, font-size, etc.):
+
+```tsx
+import styled from 'styled-components';
+
+import { rem } from '@sixt-web/core-oxide/src/utils/units';
+
+// ✅ Do: Use rem function for size values
+const Button = styled.button`
+  width: ${rem(120)};
+  height: ${rem(36)};
+`;
+
+// ❌ Don't: Use hard-codes values for size measurements
+const Button = styled.button`
+  width: 120px;
+  height: 36px;
+`;
+```
+
+### Border Radius
+
+Use the `borderRadiusStyles()` function for consistent border radius styling. This border-radius system provides consistent corner rounding across components.
+See [borderRadius.styles.ts](mdc:libraries/core/core-oxide/src/utils/styles/borderRadius.styles.ts) for more reference
+
+#### Border Radius Scale
+| Token | REM Value | Pixels | Use Case |
+|----|----|-----|----|
+| `xs` | 0.25rem | 4px | Minimal rounding |
+| `s` | 0.5rem | 8px | Buttons, small components |
+| `m` | 0.75rem | 12px | Cards, medium components |
+| `l` | 1rem | 16px | Modals, large components |
+| `xl` | 1.5rem | 24px | Hero sections |
+| `pill` | 50vmax | - | Fully rounded elements |
+
+#### Usage Example
+```tsx
+import styled from 'styled-components';
+
+import { borderRadiusStyles, borderRadius } from '@sixt-web/core-oxide/src/utils/styles/borderRadius.styles';
+
+// ✅ Do: Use borderRadiusStyles function for border radius
+const Card = styled.div`
+  ${borderRadiusStyles('m')}
+`;
+
+const SomeComponent = styled.div`
+  border-radius: ${borderRadius('m')}
+`;
+
+// For fully rounded elements
+const Badge = styled.div`
+  ${borderRadiusStyles('pill')}
+`;
+
+const SomeOtherComponent = styled.div`
+  border-radius: ${borderRadius('pill')}
+`;
+
+// ❌ Don't: Use hard-codes values for border radius
+const Card = styled.div`
+  border-radius: 8px;
+`;
+```
+
+### Colors
+
+Use the `color()` function for all color properties. Look at [Kind.ts](mdc:libraries/core/core-oxide/src/types/Kind.ts) for different variants. This color system is organized into semantic categories for consistent theming. Colors are implemented using CSS custom properties.
+See [colors.ts](mdc:libraries/core/core-oxide/src/utils/colors.ts) for more reference
+
+#### Color Categories
+1. **Primary Colors**
+   - `primary`: Main text and content
+   - `onPrimary`: Text/icons on primary backgrounds
+   - `secondary`: Less prominent content
+   - `onSecondary`: Text/icons on secondary backgrounds
+   - `tertiary`: Supplementary content
+   - `brand`: Sixt brand identity
+   - `onBrand`: Text/icons on brand backgrounds
+
+2. **State Colors**
+   - `positive`: Success states
+   - `negative`: Error states
+   - `cautious`: Warning states
+   - `hoverState`: Hover feedback
+   - `pressedState`: Pressed state
+   - `focusState`: Focus indicators
+   - `disabledState`: Disabled styling
+
+3. **Container Colors**
+   - `container1`: Primary container backgrounds
+   - `container2`: Secondary container backgrounds
+   - `canvas1`: Main background
+   - `canvas2`: Secondary background
+
+4. **Special Colors**
+   - `special1`: Lilac accent
+   - `special2`: Blue accent
+   - `special3`: Green accent
+   - `special4`: Yellow accent
+
+#### Usage Example
+```tsx
+import styled from 'styled-components';
+
+import { color } from '@sixt-web/core-oxide/src/utils/colors';
+
+// ✅ Do: Use color function for all color properties
+const Container = styled.div`
+  background-color: ${color('container1')};
+  color: ${color('primary')};
+  border: 1px solid ${color('canvas2')};
+`;
+
+// ❌ Don't: Use hard-codes values for color properties
+const Container = styled.div`
+  background-color: white;
+  color: black;
+  border: 1px solid #eee;
+`;
+```
+
+### Media Queries
+
+Use the `OXBiggerThan` enum for responsive styling:
+
+```tsx
+import styled from 'styled-components';
+
+import { OXBiggerThan } from '@sixt-web/core-oxide/src/enums/OXBiggerThan';
+import { spacing } from '@sixt-web/core-oxide/src/utils/spacing';
+
+// ✅ Do: Use OXBiggerThan enum for responsive styling
+const Container = styled.div`
+  padding: ${spacing('xs')};
+
+  @media ${OXBiggerThan.Small} {
+    padding: ${spacing('m')};
+  }
+
+  @media ${OXBiggerThan.Medium} {
+    padding: ${spacing('l')};
+  }
+`;
+
+// ❌ Don't: Use hard-codes values for responsive styling
+const Container = styled.div`
+  padding: 8px;
+
+  @media (min-width: 768px) {
+    padding: 16px;
+  }
+
+  @media (min-width: 992px) {
+    padding: 24px;
+  }
+`;
+```
+
+## Component Styling Patterns
+
+### Layout Components
+
+Use flexbox properties consistently for layout:
+
+```tsx
+import styled from 'styled-components';
+
+export const RowContainer = styled.div`
+  display: flex;
+  flex-direction: row;
+  align-items: center;
+  justify-content: space-between;
+`;
+
+export const ColumnContainer = styled.div`
+  display: flex;
+  flex-direction: column;
+  justify-content: start;
+`;
+```
+
+### Extending Core Components
+
+When extending core components, maintain their original behavior and only add necessary styling:
+
+```tsx
+import styled from 'styled-components';
+
+import { OXCol, OXRow } from '@sixt-web/core-oxide/src/ui/components/p100/Layout';
+import { spacing } from '@sixt-web/core-oxide/src/utils/spacing';
+
+export const ExtendedCol = styled(OXCol)`
+  padding: ${spacing('xs')};
+`;
+
+export const ExtendedRow = styled(OXRow)`
+  margin: 0 -${spacing('2xs')};
+`;
+```
+
+### Conditional Styling
+
+Use props with TypeScript interfaces and the css helper for conditional styling:
+
+```tsx
+import styled from 'styled-components';
+
+import { borderRadiusStyles } from '@sixt-web/core-oxide/src/utils/styles/borderRadius.styles';
+import { color } from '@sixt-web/core-oxide/src/utils/colors';
+import { spacing } from '@sixt-web/core-oxide/src/utils/spacing';
+
+interface IButtonProps {
+  isPrimary?: boolean;
+  isFullWidth?: boolean;
+}
+
+export const Button = styled.button<IButtonProps>`
+  ${borderRadiusStyles('s')}
+  padding: ${spacing('xs')} ${spacing('m')};
+
+  ${({ isPrimary }) =>
+    isPrimary
+      ? css`
+          background-color: ${color(Kind.Primary)};
+          color: ${color(Kind.OnPrimary)};
+        `
+      : css`
+          background-color: ${color(Kind.Canvas1)};
+          color: ${color(Kind.Primary)};
+          border: 1px solid ${color(Kind.Primary)};
+        `}
+
+  ${({ isFullWidth }) =>
+    isFullWidth &&
+    css`
+      width: 100%;
+    `}
+`;
+```
+
+## Naming Conventions
+
+### Component Names
+
+- Use descriptive names that reflect the component's purpose
+- Use PascalCase for styled component names
+- Use semantic names over presentational names
+
+```tsx
+import styled from 'styled-components';
+
+// ✅ Do: Use semantic names
+export const PriceContainer = styled.div`...`;
+export const BadgesContainer = styled.div`...`;
+export const FeatureItem = styled.div`...`;
+
+// ❌ Don't: Use presentational names
+export const FlexDiv = styled.div`...`;
+export const StyledBox = styled.div`...`;
+export const Container2 = styled.div`...`;
+```
+
+### Prop Names
+
+- Use camelCase for prop names
+- Prefix boolean props with 'is', 'has', or similar
+- Use consistent naming across related components
+
+```tsx
+// ✅ Do: Use proper prefixes for boolean props
+<Container isSelected={true} isCurrent={false} />
+
+// ❌ Don't: Name boolean props without proper prefixes
+<Container selected={true} current={false} />
+```
+
+## Organization
+
+### Grouped by Purpose
+
+Organize styled components by purpose or section:
+
+```tsx
+import styled from 'styled-components';
+
+// Header related components
+export const HeaderContainer = styled.div`...`;
+export const TitleContainer = styled.div`...`;
+export const SubtitleText = styled.div`...`;
+
+// Content related components
+export const ContentContainer = styled.div`...`;
+export const FeatureList = styled.ul`...`;
+export const FeatureItem = styled.li`...`;
+
+// Footer related components
+export const FooterContainer = styled.div`...`;
+export const ActionButton = styled.button`...`;
+```
+
+### Component Ordering
+
+Order styled components to match their appearance in the rendered component when possible.
+
+## Best Practices
+
+- **Use Design System Tokens**: Consistently use spacing, colors, and other design tokens from core-oxide
+- **Follow Flexbox Patterns**: Use consistent flexbox patterns for layout
+- **Fonts**: Never define `font-size` or `font-style` in styled components. It should already be handled via `OXTypography` component
+- **Responsive Design**: Use OXBiggerThan for media queries and create responsive layouts
+- **Semantic HTML**: Use appropriate HTML elements for styled components
+- **Consistency**: Maintain consistent naming and styling patterns across components
+- **Single Responsibility**: Each styled component should have a single responsibility
+- **Props Interface**: Define props interfaces for components with props
+- **Avoid Hardcoded Values**: Never use hardcoded pixel values, colors, or other styling values
+- **Documentation**: Include comments for complex styling logic
+- **Nesting**: Minimize nesting in styled-components to improve readability
+- **Mobile-First**: Design for mobile first, then add styling for larger screens
+- **State Management**: Use conditional styling based on props for different states
+- **Accessibility**: Ensure styling supports accessibility requirements
+
+## Best Practices
+
+### 1. Layout Components
+```tsx
+import styled from 'styled-components';
+
+import { spacing } from '@sixt-web/core-oxide/src/utils/spacing';
+
+const RowContainer = styled.div`
+  display: flex;
+  flex-direction: row;
+  align-items: center;
+  gap: ${spacing('xs')};
+`;
+
+const ColumnContainer = styled.div`
+  display: flex;
+  flex-direction: column;
+  gap: ${spacing('s')};
+`;
+```
+
+### 2. Responsive Design
+```tsx
+import styled from 'styled-components';
+
+import { OXBiggerThan } from '@sixt-web/core-oxide/src/enums/OXBiggerThan';
+import { spacing } from '@sixt-web/core-oxide/src/utils/spacing';
+
+const ResponsiveContainer = styled.div`
+  padding: ${spacing('xs')};
+
+  @media ${OXBiggerThan.Small} {
+    padding: ${spacing('m')};
+  }
+
+  @media ${OXBiggerThan.Medium} {
+    padding: ${spacing('l')};
+  }
+`;
+```
+
+### 3. Component States
+```tsx
+import styled from 'styled-components';
+
+import { borderRadius } from '@sixt-web/core-oxide/src/utils/styles/borderRadius.styles';
+import { color } from '@sixt-web/core-oxide/src/utils/colors';
+import { spacing } from '@sixt-web/core-oxide/src/utils/spacing';
+
+const InteractiveButton = styled.button`
+  ${borderRadiusStyles('s')}
+  background-color: ${color('primary')};
+  color: ${color('onPrimary')};
+  padding: ${spacing('xs')} ${spacing('s')};
+
+  &:hover {
+    background-color: ${color('hoverState')};
+  }
+
+  &:disabled {
+    background-color: ${color('disabledState')};
+    color: ${color('secondary')};
+  }
+`;
+```
+
+## Examples
+
+### Complete Component Example
+
+```tsx
+import styled from 'styled-components';
+
+// Button.styled.ts
+import styled, { css } from 'styled-components';
+
+import { borderRadiusStyles } from '@sixt-web/core-oxide/src/utils/styles/borderRadius.styles';
+import { color } from '@sixt-web/core-oxide/src/utils/colors';
+import { spacing } from '@sixt-web/core-oxide/src/utils/spacing';
+import { rem } from '@sixt-web/core-oxide/src/utils/units';
+
+interface IButtonProps {
+  isFullWidth?: boolean;
+  variant?: 'primary' | 'secondary' | 'tertiary';
+}
+
+export const Button = styled.button<IButtonProps>`
+  ${borderRadiusStyles('s')}
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: ${spacing('xs')} ${spacing('m')};
+  font-size: ${rem(16)};
+  transition: background-color 0.2s, color 0.2s, border-color 0.2s;
+
+  ${({ isFullWidth }) =>
+    isFullWidth &&
+    css`
+      width: 100%;
+    `}
+
+  ${({ variant = 'primary' }) => {
+    switch (variant) {
+      case 'primary':
+        return css`
+          background-color: ${color('primary')};
+          color: ${color('onPrimary')};
+          border: none;
+
+          &:hover {
+            background-color: ${color('hoverState')};
+          }
+        `;
+      case 'secondary':
+        return css`
+          background-color: transparent;
+          color: ${color('primary')};
+          border: 1px solid ${color('primary')};
+
+          &:hover {
+            background-color: ${color('canvas2')};
+          }
+        `;
+      case 'tertiary':
+        return css`
+          background-color: transparent;
+          color: ${color('primary')};
+          border: none;
+
+          &:hover {
+            color: ${color('hoverState')};
+          }
+        `;
+    }
+  }}
+
+  &:disabled {
+    background-color: ${color('disabledState')};
+    color: ${color('secondary')};
+    border-color: transparent;
+    cursor: not-allowed;
+  }
+`;
+
+export const ButtonIcon = styled.span`
+  margin-right: ${spacing('3xs')};
+`;
+```

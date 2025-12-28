@@ -1,0 +1,34 @@
+{
+  "name": "buddy-os",
+  "version": "5.2.0",
+  "description": "Role-Aware Autonomous Engineering OS for Cursor IDE",
+  "bin": {
+    "buddy-os": "./bin/cli.js"
+  },
+  "main": "./bin/cli.js",
+  "keywords": [
+    "cursor",
+    "cursor-rules",
+    "ai-coding",
+    "dev-productivity",
+    "engineering-os",
+    "cursor-plugin",
+    "mcp",
+    "model-context-protocol"
+  ],
+  "author": "Buddy OS",
+  "license": "MIT",
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/sharath317/buddy-os"
+  },
+  "homepage": "https://github.com/sharath317/buddy-os#readme",
+  "engines": {
+    "node": ">=18.0.0"
+  },
+  "files": [
+    "bin/",
+    "rules/",
+    "templates/"
+  ]
+}

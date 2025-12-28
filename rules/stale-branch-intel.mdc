@@ -1,0 +1,104 @@
+---
+description: "Stale Branch Intelligence - Identifies and suggests cleanup for outdated branches"
+category: Intelligence
+globs: []
+alwaysApply: false
+---
+
+# 🧹 Stale Branch Intelligence
+
+Automatically identifies branches that are outdated, diverged, or can be cleaned up.
+
+## Trigger
+
+Activates on:
+- `/buddy cleanup`
+- Morning `/buddy` (summary only)
+- Manual `git branch` analysis
+
+## Detection Logic
+
+For each branch:
+1. Get branch age (days since last commit)
+2. Calculate similarity to main (% of changes already in main)
+3. Check for merge conflicts
+4. Check if PR exists
+
+## Staleness Categories
+
+| Category | Criteria | Icon | Action |
+|----------|----------|------|--------|
+| Fresh | <3 days, <50% similar | 🟢 | No action |
+| Aging | 3-7 days, <80% similar | 🟡 | Monitor |
+| Stale | >7 days, <80% similar | 🟠 | Suggest rebase |
+| Obsolete | Any age, >90% similar | 🔴 | Suggest delete |
+| Conflicted | Any, has conflicts | ⚫ | Force decision |
+
+## Similarity Calculation
+
+High similarity = branch content already merged or obsolete.
+
+Factors:
+- Files changed in branch vs main
+- Line-level content overlap
+- Commit message matching
+
+## Integration with /buddy cleanup
+
+Output format:
+
+```
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+🧹 STALE BRANCH INTELLIGENCE
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+📊 BRANCH HEALTH
+├─ 🟢 Fresh: X branches
+├─ 🟡 Aging: X branches
+├─ 🟠 Stale: X branches
+├─ 🔴 Obsolete: X branches
+└─ ⚫ Conflicted: X branches
+
+🎯 RECOMMENDED ACTIONS
+[A] Delete obsolete branches
+[B] Rebase stale branches
+[C] Detailed report
+```
+
+## Trust Levels
+
+| Action | Trust Level | Confirmation |
+|--------|-------------|--------------|
+| Analyze branches | L1 | None |
+| Suggest cleanup | L1 | None |
+| Rebase branch | L3 | [Y/N] or YOLO |
+| Delete merged branch | L3 | [Y/N] or YOLO |
+| Delete unmerged branch | L4 | Always required |
+| Force push after rebase | L4 | Always required |
+
+## Safety Rules
+
+NEVER auto-delete:
+- Branches with unmerged changes
+- Branches with open PRs
+- Branches touched in last 24 hours
+- main, master, develop
+
+ALWAYS confirm:
+- Deletion of any branch
+- Rebase operations
+- Force push
+
+## State Tracking
+
+```json
+{
+  "branch_intelligence": {
+    "last_analyzed": "timestamp",
+    "total_branches": 60,
+    "fresh_count": 5,
+    "stale_count": 18,
+    "obsolete_count": 15
+  }
+}
+```

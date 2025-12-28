@@ -1,0 +1,183 @@
+---
+description: Component limits, hook patterns, styling tokens - auto-enforced while typing
+category: Quality Gates
+globs: ["apps/**/*.tsx", "apps/**/*.ts", "libraries/**/*.tsx", "libraries/**/*.ts"]
+alwaysApply: true
+---
+
+# Web Development Standards (Real-time Enforcement)
+
+These rules are automatically enforced by Cursor while you type.
+
+## Component Size Limits
+
+When generating React components, ALWAYS enforce these limits:
+
+| Metric | Target | Warning | Critical |
+|--------|--------|---------|----------|
+| Lines of code | < 150 | 150-300 | > 300 |
+| Imports | < 20 | 20-35 | > 35 |
+| useState calls | < 4 | 4-6 | > 6 |
+| useEffect calls | < 3 | 3-5 | > 5 |
+| Custom hooks | < 8 | 8-15 | > 15 |
+
+**If generating code that exceeds WARNING limits:**
+1. STOP and suggest decomposition
+2. Extract hooks for complex logic
+3. Split into sub-components
+
+## Hook Patterns (Always Follow)
+
+### ✅ REQUIRED: AbortController for async useEffect
+```typescript
+useEffect(() => {
+    const controller = new AbortController();
+
+    const fetchData = async () => {
+        try {
+            const result = await api.getData({ signal: controller.signal });
+            setData(result);
+        } catch (err) {
+            if (!controller.signal.aborted) {
+                setError(err as ApiError);
+            }
+        }
+    };
+
+    fetchData();
+    return () => controller.abort();
+}, [dependency]);
+```
+
+### ✅ REQUIRED: useWatch instead of watch()
+```typescript
+// ✅ GOOD - Use this
+const value = useWatch({ name: 'fieldName', control });
+
+// ❌ BAD - Never generate this
+const value = methods.watch();
+```
+
+### ✅ REQUIRED: Memoize Yup schemas
+```typescript
+// ✅ GOOD
+const schema = useMemo(() => yup.object({
+    field: yup.string().required()
+}), []);
+
+// ❌ BAD - Recreated every render
+const schema = yup.object({ field: yup.string().required() });
+```
+
+### ✅ REQUIRED: No components inside render
+```typescript
+// ✅ GOOD - Defined outside or memoized
+const InfoTrigger = memo(({ onClick }: { onClick: () => void }) => (
+    <button onClick={onClick}>Info</button>
+));
+
+// ❌ BAD - Recreated every render
+const Component = () => {
+    const InfoTrigger = () => <button>Info</button>; // NEVER DO THIS
+    return <InfoTrigger />;
+};
+```
+
+## Styling Rules (Always Follow)
+
+### ✅ REQUIRED: Use design tokens
+```typescript
+import { spacing } from '@sixt-web/core-oxide/src/utils/spacing';
+import { color } from '@sixt-web/core-oxide/src/utils/colors';
+import { borderRadiusStyles } from '@sixt-web/core-oxide/src/utils/styles/borderRadius.styles';
+
+// ✅ GOOD
+padding: ${spacing('xs')};
+background: ${color('container1')};
+${borderRadiusStyles('m')}
+
+// ❌ BAD - Never hardcode
+padding: 16px;
+background: #ffffff;
+border-radius: 8px;
+```
+
+### ✅ REQUIRED: OXBiggerThan for responsive
+```typescript
+import { OXBiggerThan } from '@sixt-web/core-oxide/src/enums/OXBiggerThan';
+
+// ✅ GOOD
+@media ${OXBiggerThan.Small} {
+    padding: ${spacing('m')};
+}
+
+// ❌ BAD
+@media (min-width: 768px) { ... }
+```
+
+### ✅ REQUIRED: No font-size in styled components
+Typography is handled by OXTypography only. Never define font-size in styled components.
+
+## Error Handling (Always Follow)
+
+### ✅ REQUIRED: Use ApiError type
+```typescript
+// ✅ GOOD
+catch (err) {
+    const error = err as ApiError;
+    setError(error.message);
+}
+
+// ❌ BAD
+catch (err: any) { ... }
+```
+
+## Import Organization
+
+```typescript
+// 1. External libraries
+import { useState, useEffect, useMemo } from 'react';
+
+// 2. Sixt packages (alphabetical)
+import { useOXBreakpoint } from '@sixt-web/core-oxide';
+import { OXTypography } from '@sixt-web/core-oxide/src/ui/components/p100/Typography';
+
+// 3. Relative imports
+import * as S from './Component.styled';
+import type { IComponent } from './Component.types';
+import { useComponentData } from './hooks/useComponentData';
+```
+
+## Feature Folder Structure
+
+Always create new features with this structure:
+```
+FeatureName/
+├── FeatureName.tsx              # Orchestrator (< 100 lines)
+├── FeatureName.styled.ts        # Styles only
+├── FeatureName.types.ts         # Types/interfaces
+├── FeatureName.test.tsx         # Tests
+├── hooks/                       # Feature-specific hooks
+│   ├── useFeatureState.ts
+│   └── useFeatureData.ts
+└── components/                  # Sub-components
+    └── FeatureSection/
+```
+
+## Commit Message Rules
+
+**NEVER generate:**
+- `fix:`, `feat:`, `chore:`, `refactor:` prefixes
+- Ticket IDs like `[RBW-3459]` or `CNBE-3008`
+
+**ALWAYS generate natural messages:**
+- "Prevent duplicate title on mobile"
+- "Use breakpoint hook for responsive content"
+- "Simplify line item display logic"
+
+## JSDoc Rules
+
+**Keep simple. NEVER include:**
+- Ticket references (RBW-3459, CNBE-3008)
+- PR references (PR #21216)
+- Author names or dates

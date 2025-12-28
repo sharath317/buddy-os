@@ -1,0 +1,321 @@
+---
+description: "Role-Based Permission System - Enforces trust levels (L1-L4) based on user role"
+category: Governance
+globs: []
+alwaysApply: true
+---
+
+# 🔐 Role-Based Permission System
+
+Buddy OS operates under **explicit role constraints**. This rule is MANDATORY for enterprise safety.
+
+## Role Detection Order
+
+```
+1. .cursor/buddy-state.json → "role_system.current_role"
+2. Environment variable → BUDDY_ROLE
+3. Cursor Settings → buddy.role
+4. Default → SDE3 (safe middle ground)
+```
+
+## Role Definitions
+
+| Role | Code | Default Trust | Description |
+|------|------|---------------|-------------|
+| Junior Engineer | `SDE1` | L1 | Suggest only, read-only MCPs |
+| Mid-level Engineer | `SDE2` | L2 | Execute with confirmation |
+| Senior Engineer | `SDE3` | L2-L3 | Context-dependent autonomy |
+| Lead IC | `Senior_SDE` | L3 | Execute silently, report |
+| Principal Engineer | `Staff_Engineer` | L3-L4 | Full autonomy, audit logged |
+| Team Lead | `Engineering_Manager` | L2-L3 | Team-scoped visibility |
+| Product Manager | `Product_Owner` | L1-L2 | Read-heavy, planning focus |
+| Senior PM | `Senior_Product_Owner` | L2-L3 | Cross-team visibility |
+
+## Trust Level Definitions
+
+### L1: Analysis (Suggest Only)
+
+```yaml
+actions:
+  - Read files, search codebase
+  - Analyze churn, metrics
+  - Generate reports
+  - View PR/Jira status
+gate: NONE
+output: Suggestions only, no modifications
+```
+
+### L2: Drafting (Execute with Confirmation)
+
+```yaml
+actions:
+  - Draft PR descriptions
+  - Draft commit messages
+  - Draft new rules (in /drafts/)
+  - Generate test stubs
+gate: Show as [DRAFT], require approval
+output: Artifacts for human review
+```
+
+### L3: Action (Execute Silently)
+
+```yaml
+actions:
+  - Auto-fix lint errors
+  - Commit changes
+  - Create branches
+  - Rebase operations
+gate: YOLO mode OR explicit [Y/N]
+output: Modifications logged to audit
+```
+
+### L4: Critical (Human-in-the-Loop ALWAYS)
+
+```yaml
+actions:
+  - Merge to main/master
+  - Jira status transitions
+  - Production deploys
+  - Force push
+  - Delete unmerged branches
+gate: ALWAYS ask, YOLO mode IGNORED
+output: Full audit trail required
+```
+
+## Permission Matrix by Role
+
+### SDE1 (Junior Engineer)
+
+```yaml
+allowed_commands:
+  - /buddy
+  - /buddy focus
+  - /buddy status
+  - /gather-context
+  - /full-flow
+blocked_commands:
+  - /merge
+  - /auto-rebase
+  - /generate-rules
+  - /buddy role set *
+mcp_access:
+  github: read
+  jira: read
+  slack: none
+  calendar: none
+autonomy: L1
+can_approve_rules: false
+can_approve_refactors: false
+```
+
+### SDE2 (Mid-level Engineer)
+
+```yaml
+allowed_commands:
+  - /buddy
+  - /buddy focus
+  - /buddy status
+  - /gather-context
+  - /full-flow
+  - /buddy ideas
+  - /churn-map
+  - /vibe-check
+blocked_commands:
+  - /merge
+  - /auto-rebase
+mcp_access:
+  github: read
+  jira: read
+  slack: read
+  calendar: none
+autonomy: L2
+can_approve_rules: false
+can_approve_refactors: false
+```
+
+### SDE3 (Senior Engineer)
+
+```yaml
+allowed_commands:
+  - /buddy *
+  - /gather-context
+  - /full-flow
+  - /buddy ideas *
+  - /churn-map
+  - /vibe-check
+  - /pr-review
+  - /snapshot
+blocked_commands:
+  - /merge (requires senior approval)
+mcp_access:
+  github: read-write
+  jira: read-write
+  slack: read
+  calendar: read
+autonomy: L2-L3
+can_approve_rules: false
+can_approve_refactors: true (own code)
+```
+
+### Senior_SDE (Lead IC)
+
+```yaml
+allowed_commands: all
+blocked_commands:
+  - /deploy (requires L4 approval)
+mcp_access:
+  github: read-write
+  jira: read-write
+  slack: read-write
+  calendar: read
+autonomy: L3
+can_approve_rules: true (drafts)
+can_approve_refactors: true
+```
+
+### Staff_Engineer (Principal)
+
+```yaml
+allowed_commands: all
+blocked_commands: none
+mcp_access: all
+autonomy: L3-L4
+can_approve_rules: true (activate)
+can_approve_refactors: true (cross-team)
+can_escalate: true
+```
+
+### Engineering_Manager (Team Lead)
+
+```yaml
+allowed_commands:
+  - /buddy
+  - /buddy velocity
+  - /buddy health
+  - /team-summary
+  - /sprint-review
+blocked_commands:
+  - /auto-rebase
+  - /merge
+mcp_access:
+  github: read
+  jira: read-write
+  slack: read
+  calendar: read-write
+autonomy: L2-L3
+special: team-wide visibility
+```
+
+### Product_Owner (PM)
+
+```yaml
+allowed_commands:
+  - /buddy
+  - /jira-fetch
+  - /ticket-summary
+  - /sprint-planning
+blocked_commands:
+  - all code modification commands
+mcp_access:
+  github: read
+  jira: read-write
+  slack: read
+  calendar: read
+autonomy: L1-L2
+```
+
+## Enforcement Logic
+
+```python
+def check_permission(command, role):
+    role_config = ROLE_PERMISSIONS[role]
+
+    # Check if command is blocked
+    if command in role_config.blocked_commands:
+        return {
+            "allowed": False,
+            "reason": f"Command '{command}' requires {get_required_role(command)} role",
+            "alternative": suggest_alternative(command, role),
+            "escalate_to": get_escalation_target(command)
+        }
+
+    # Check MCP access
+    if command.requires_mcp:
+        mcp = command.required_mcp
+        access = role_config.mcp_access.get(mcp, "none")
+        if access == "none":
+            return {"allowed": False, "reason": f"No {mcp} access for {role}"}
+        if command.requires_write and access == "read":
+            return {"allowed": False, "reason": f"Read-only {mcp} access for {role}"}
+
+    return {"allowed": True}
+```
+
+## Escalation Protocol
+
+When a command exceeds role authority:
+
+```
+⚠️ PERMISSION DENIED
+├─ Command: /merge
+├─ Your Role: SDE2
+├─ Required Role: Senior_SDE or higher
+│
+├─ Why: Merge operations require senior review
+│
+├─ Alternatives:
+│   [A] Request review from @senior-dev
+│   [B] Run /pr-ready to prepare for merge
+│   [C] Escalate to Engineering Manager
+│
+└─ Escalate? [Y/N]
+```
+
+## YOLO Mode Restrictions
+
+```yaml
+YOLO_MODE_ALLOWED:
+  - Staff_Engineer: L3 actions only
+  - Senior_SDE: L3 actions only
+  - SDE3: Disabled
+  - SDE2: Disabled
+  - SDE1: Disabled
+
+YOLO_MODE_NEVER_BYPASSES:
+  - L4 actions (merge, deploy, force-push)
+  - Cross-team modifications
+  - Production-affecting changes
+```
+
+## Audit Requirements by Level
+
+| Level | Audit Required | Log Detail |
+|-------|----------------|------------|
+| L1 | Optional | Command invoked |
+| L2 | Required | Draft created, user response |
+| L3 | Required | Files modified, confirmation method |
+| L4 | Mandatory | Full context, reversibility, undo command |
+
+## Role Change Commands
+
+```bash
+/buddy role show              # Display current role and permissions
+/buddy role set Staff_Engineer  # Change role (if allowed)
+/buddy role compare SDE3      # Compare permissions with another role
+```
+
+## State Persistence
+
+Role is stored in `.cursor/buddy-state.json`:
+
+```json
+{
+  "role_system": {
+    "current_role": "Staff_Engineer",
+    "role_detected_from": "manual",
+    "autonomy_level": "L3-L4",
+    "onboarding_completed": true,
+    "permissions_override": null
+  }
+}
+```

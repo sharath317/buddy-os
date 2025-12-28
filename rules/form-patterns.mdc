@@ -1,0 +1,95 @@
+---
+description: useWatch over watch(), memoize Yup schemas, OXForm wrapper required
+category: Coding Patterns
+globs: ["**/*.tsx"]
+triggers:
+  - "useForm"
+  - "FormProvider"
+  - "useFormContext"
+  - "watch("
+alwaysApply: false
+severity: error
+---
+
+# React Hook Form Patterns
+
+## CRITICAL: useWatch over watch()
+
+The watch() function causes re-renders on EVERY form change. useWatch is optimized.
+
+```typescript
+// NEVER DO THIS - re-renders entire component on any field change
+const allValues = methods.watch();
+const singleValue = watch('fieldName');
+
+// ALWAYS DO THIS - surgical re-renders
+import { useWatch } from 'react-hook-form';
+
+// Single field
+const value = useWatch({ name: 'fieldName', control });
+
+// Multiple fields
+const [field1, field2] = useWatch({
+    name: ['fieldName1', 'fieldName2'],
+    control
+});
+
+// With default value
+const value = useWatch({
+    name: 'fieldName',
+    control,
+    defaultValue: ''
+});
+```
+
+## REQUIRED: Memoize Yup Schemas
+
+Yup schemas are objects - recreating them causes unnecessary validation.
+
+```typescript
+// BAD - Schema recreated every render
+const MyComponent = () => {
+    const schema = yup.object({
+        email: yup.string().email().required(),
+    });
+
+    const methods = useForm({ resolver: yupResolver(schema) });
+};
+
+// GOOD - Schema memoized
+const MyComponent = () => {
+    const schema = useMemo(() => yup.object({
+        email: yup.string().email().required(),
+    }), []);
+
+    const methods = useForm({ resolver: yupResolver(schema) });
+};
+
+// BETTER - Schema outside component (if no dependencies)
+const schema = yup.object({
+    email: yup.string().email().required(),
+});
+
+const MyComponent = () => {
+    const methods = useForm({ resolver: yupResolver(schema) });
+};
+```
+
+## REQUIRED: OXForm Wrapper
+
+All form components require OXForm wrapper.
+
+```typescript
+import { useForm } from 'react-hook-form';
+import { OXForm } from '@sixt-web/core-oxide/src/components/p100/Form';
+
+const MyForm = () => {
+    const methods = useForm({ defaultValues: { field: '' } });
+
+    return (
+        <OXForm methods={methods} onSubmit={handleSubmit}>
+            <OXTextField name="field" label="Field" />
+        </OXForm>
+    );
+};
+```

@@ -1,0 +1,327 @@
+---
+description:
+globs:
+alwaysApply: true
+---
+# Component Structure Best Practices
+This document outlines the preferred structure and organization for React components in our codebase, following the established patterns.
+
+## Component File Organization
+
+Each component should be organized into a directory structure as follows. The order of creation can also be same like explained below:
+
+```
+ComponentName/
+├── ComponentName.styled.ts   # Styled components
+├── ComponentName.types.ts    # Type definitions (if needed)
+├── ComponentName.tsx         # Main component implementation
+│── ComponentName.stories.tsx # Stories to be created if the component is inside libraries folder
+│── ComponentName.mdx         # Documentation to be created if the component is inside libraries folder
+├── ComponentName.test.tsx    # Unit testing of the main component
+├── ComponentName.mock.ts     # Common mocks to be used for both test and stories file
+```
+
+**Important:** Do NOT create `index.ts` barrel files inside component directories. We want to discourage the usage of barrel files at the component level. Components should be imported directly from their main file (e.g., `import { ComponentName } from './ComponentName/ComponentName'`).
+
+## Main Component (ComponentName.tsx)
+
+The main component file should:
+
+1. **Focus on component logic and rendering**
+2. **Import styled components with namespace**
+3. **Use functional component syntax**
+
+```tsx
+import { OXTypography } from '@sixt-web/core-oxide/src/ui/components/p100/Typography';
+import { OXIcon } from '@sixt-web/core-oxide/src/ui/components/p100/Icon';
+
+import { someConstants, otherData } from './constants';
+import * as S from './ComponentName.styled';
+import { IComponentName } from './ComponentName.types.ts';
+
+/**
+ * Brief component description
+ */
+export const ComponentName = ({ prop1, prop2 }: IComponentName): JSX.Element => {
+    // Component logic here
+
+    return (
+        <S.Container>
+            <S.Content>
+                {/* Component JSX */}
+            </S.Content>
+        </S.Container>
+    );
+};
+
+```
+
+### Event Handlers
+
+- **Internal handlers**: Prefix with `handle*` (e.g., `handleChange`)
+- **External handlers**: Prefix with `on*` (e.g., `onChange`)
+
+## Form Component Dependencies
+
+### Components with react-hook-form Dependency
+
+Some components in our design system require being wrapped in a FormProvider from react-hook-form to function properly. When using these components, always:
+
+1. **Import and use useForm hook and OXForm wrapper**
+2. **Initialize the form with appropriate defaultValues**
+3. **Wrap the component in a OXForm**
+
+```tsx
+import { useForm } from 'react-hook-form';
+import type { FieldValue } from 'react-hook-form';
+
+import { OXForm } from '@sixt-web/core-oxide/src/components/p100/Form';
+import { OXRadioButton } from '@sixt-web/core-oxide/src/components/p100/RadioButton';
+import { OXTextField } from '@sixt-web/core-oxide/src/components/p100/inputs/TextField';
+
+// ✅ Do: Wrap form elements with OXForm with usage of react-hook-form
+export const MyFormComponent = () => {
+    // Initialize react-hook-form
+    const methods = useForm<FieldValue>({
+        defaultValues: {
+            'fieldName': '',
+            'radioOption': '',
+        },
+    });
+
+    const handleSubmit = (data: FieldValue) => {
+        console.log(data.fieldName, data.radioOption)
+    }
+
+    return (
+        <OXForm methods={methods}>
+            <div>
+                <OXTextField
+                    name="fieldName"
+                    type="text"
+                    label="Field Name"
+                />
+
+                <OXRadioButton
+                    id="option-id"
+                    name="radioOption"
+                    value="option-value"
+                />
+            </div>
+        </FormProvider>
+    );
+};
+
+// ❌ Don't: Use form elements directly without OXForm
+export const IncorrectImplementation = () => {
+    return (
+        <div>
+            {/* Missing OXForm - will cause errors */}
+            <OXRadioButton
+                id="option-id"
+                name="radio-option"
+                value="option-value"
+            />
+        </div>
+    );
+};
+
+```
+
+### Components with known FormProvider dependencies
+
+The following components **require** OXForm to wrap them:
+
+- OXRadioButton / OXRadioButtonWithLabel
+- OXCheckbox / OXCheckboxWithLabel
+- OXSelect
+- OXTextArea
+- OXTextField
+
+### Best Practices for Form Components
+
+1. **Check component-specific rules** to understand their dependencies
+2. **Wrap form components in OXForm** even when using a single form element
+3. **Provide meaningful defaultValues** in the useForm hook
+4. **Use consistent naming** between component IDs and form field names
+5. **Implement proper validation** and error handling for form fields using `yup`
+
+## Styled Components (ComponentName.styled.ts)
+
+Styled components should:
+
+1. **Be separated into their own file**
+2. **Use Sixt design system utilities**
+3. **Have descriptive names**
+4. **Be exported individually**
+
+```tsx
+import styled from 'styled-components';
+
+import { Kind } from '@sixt-web/core-oxide';
+import { spacing } from '@sixt-web/core-oxide/src/utils/spacing';
+import { rem } from '@sixt-web/core-oxide/src/utils/units';
+import { color } from '@sixt-web/core-oxide/src/utils/colors';
+import { borderRadius } from '@sixt-web/core-oxide/src/utils/styles/borderRadius.styles';
+
+export const Container = styled.div`
+    display: flex;
+    flex-direction: column;
+    gap: ${spacing('xs')}; // try avoiding gap for a flexbox implementation
+    background-color: ${color('primary')}
+`;
+
+export const Content = styled.div`
+    padding: ${spacing('xs')};
+    border-radius: ${borderRadius('m')};
+`;
+
+```
+
+## Extending Design System Components
+
+When you need to customize design system components, extend them using styled-components:
+
+1. **Use descriptive names with 'Extended' prefix**
+2. **Keep modifications minimal and focused on specific needs**
+3. **Maintain the core component's behavior**
+
+```tsx
+import styled from 'styled-components';
+
+import { OXCol, OXRow } from '@sixt-web/core-oxide/src/ui/components/p100/Layout';
+import { OXBiggerThan } from '@sixt-web/core-oxide/src/enums/OXBiggerThan';
+import { spacing } from '@sixt-web/core-oxide/src/utils/spacing';
+
+// Extending a design system component with custom styles
+export const ExtendedCol = styled(OXCol)`
+    display: flex;
+    padding: 0 ${spacing('3xs')};
+    max-width: 100%;
+    // For a responsive behavior, use the block below
+    @media ${OXBiggerThan.Small} {
+        padding: ${spacing('xs')} ${spacing('2xs')} 0 ${spacing('2xs')};
+    }
+`;
+
+export const ExtendedRow = styled(OXRow)`
+    margin: 0 -${spacing('3xs')};
+
+    @media ${OXBiggerThan.Small} {
+        margin: 0 -${spacing('2xs')} ${spacing('2xs')} -${spacing('2xs')};
+    }
+`;
+
+```
+
+
+### CSS-in-JS Best Practices
+
+When writing styled components:
+
+1. **Use spacing and rem utilities from the design system**
+2. **Use descriptive and semantic names**
+3. **Group related properties together**
+4. **Keep styled components focused and single-purpose**
+5. **Use composition over complex styling**
+
+```tsx
+// ✅ Do: Keep styled components focused and single-purpose
+export const Container = styled.div`
+    display: flex;
+    flex-direction: column;
+    gap: ${spacing('xs')};
+    padding: ${spacing('sm')};
+`;
+
+export const Header = styled.header`
+    margin-bottom: ${spacing('xs')};
+`;
+
+// ❌ Don't: Combine styled components together
+export const Container = styled.div`
+    display: flex;
+    flex-direction: column;
+    gap: ${spacing('xs')};
+    padding: ${spacing('sm')};
+
+    & > header {
+        margin-bottom: ${spacing('xs')};
+    }
+`;
+
+```
+
+## Types (ComponentName.types.ts, if needed)
+
+Types should:
+
+1. **Be separated into their own file**
+2. **Have descriptive names with 'I' prefix for interfaces**
+3. **Include JSDoc comments for complex types**
+
+```tsx
+/**
+ * Main component props
+ */
+export interface IComponentName {
+    /** Primary label text */
+    label: string;
+
+    /** Whether the component is in active state */
+    isActive?: boolean;
+}
+
+/** Description on what the Status refers to */
+export type Status = 'active' | 'inactive' | 'pending';
+
+```
+
+## Stories file (ComponentName.stories.tsx) - only when we create components under `libraries/` folder.
+
+Always include the Figma URL in Storybook stories for components:
+
+```typescript
+const figmaUrl = 'https://www.figma.com/file/xxx/Design?node-id=123';
+
+export default {
+  title: 'Components/ComponentName',
+  component: ComponentName,
+
+  parameters: {
+    design: {
+      type: 'figma',
+      url: figmaUrl,
+    },
+  },
+};
+```
+
+## Test file (ComponentName.test.tsx)
+
+This file contains the content to unit-test the component if possible on it's various states
+
+See [testing-component.mdc](mdc:testing-component.mdc) for more references for React Component testing guidelines
+
+## Mock file if needed (ComponentName.mock.ts)
+
+This file contains the common mocks if in case, we have stories and test for the component
+
+### Good Component Organization
+
+The SmartProtectionOption component follows these best practices:
+
+- **SmartProtectionOption.tsx**: Contains the component logic and rendering
+- **SmartProtectionOption.styled.ts**: Contains only styled components
+- **SmartProtectionOption.types.ts**: Contains type information for this component
+- **SmartProtectionOption.test.tsx**: Contains unit testing of the component created
+- **SmartProtectionOption.mock.ts**: Contains mocks to be used for both unit testing and stories if available
+- All imports are organized and grouped logically
+- Styled components are imported with namespace `S`
+
+This structure promotes:
+- Separation of concerns
+- Code reusability
+- Maintainability
+- Consistent styling
+- Better testability

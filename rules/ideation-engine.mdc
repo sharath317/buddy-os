@@ -1,0 +1,277 @@
+---
+description: "Autonomous Ideation Engine - Captures, scores, and executes improvement ideas"
+category: Automation
+globs: []
+alwaysApply: false
+---
+
+# 💡 Autonomous Ideation Engine
+
+Buddy maintains a background Ideation Queue that discovers, prioritizes, and executes improvement ideas.
+
+## Idea Sources
+
+### 1. Manual Input
+
+```bash
+/buddy idea "Refactor payment hooks for testability"
+```
+
+Creates idea in `.cursor/ideas/backlog/` with metadata.
+
+### 2. Repo Signals (Auto-Detected)
+
+| Signal | Detection | Idea Type |
+|--------|-----------|-----------|
+| High churn (>50 commits/6mo) | `/churn-map` | Refactoring |
+| Missing tests in critical paths | Coverage analysis | Testing |
+| Large files (>300 LOC) | File scan | Splitting |
+| Deprecated dependencies | `npm outdated` | Upgrade |
+| Bundle contributors >100KB | Bundle analysis | Optimization |
+
+### 3. Slack Pain Points (When MCP Connected)
+
+```python
+PAIN_KEYWORDS = [
+    "bug", "broken", "slow", "annoying",
+    "workaround", "hate", "frustrating",
+    "should be", "wish we could"
+]
+
+# Extract from monitored channels
+for message in slack_messages:
+    if any(keyword in message.lower() for keyword in PAIN_KEYWORDS):
+        create_idea(source="slack", content=message)
+```
+
+### 4. Market Patterns
+
+Tracked in `.cursor/ideas/sources/market-trends.md`:
+
+- React/Next.js releases
+- WCAG updates
+- Performance best practices
+- Security advisories
+
+### 5. Metrics Monitoring
+
+| Metric | Threshold | Idea Type |
+|--------|-----------|-----------|
+| Bundle size growth >5% | Build comparison | Optimization |
+| Test coverage drop >3% | Coverage delta | Testing |
+| Performance regression | Lighthouse | Optimization |
+| Error rate increase | Monitoring | Bug fix |
+
+## Idea Lifecycle
+
+```
+┌─────────────────────────────────────────────────────────────────────┐
+│                    IDEA LIFECYCLE                                   │
+├─────────────────────────────────────────────────────────────────────┤
+│                                                                     │
+│  📥 BACKLOG (.cursor/ideas/backlog/)                               │
+│  ├── Ideas captured from all sources                               │
+│  ├── Auto-tagged by source and category                            │
+│  └── Initial scoring applied                                       │
+│                                                                     │
+│                    ↓ (Weekly scan)                                  │
+│                                                                     │
+│  ⭐ READY (.cursor/ideas/ready/)                                    │
+│  ├── Top 3 ideas by priority score                                 │
+│  ├── Decision Contract attached                                    │
+│  └── Surfaced in /buddy output                                     │
+│                                                                     │
+│                    ↓ (User approves)                                │
+│                                                                     │
+│  🔄 IN-PROGRESS (.cursor/ideas/in-progress/)                       │
+│  ├── Implementation plan created                                   │
+│  ├── Work executed as [DRAFT]                                      │
+│  └── Progress tracked                                              │
+│                                                                     │
+│                    ↓ (Complete or reject)                           │
+│                                                                     │
+│  📦 ARCHIVE (.cursor/ideas/archive/)                               │
+│  ├── Outcome recorded                                              │
+│  ├── Impact measured                                               │
+│  └── Learning captured                                             │
+│                                                                     │
+└─────────────────────────────────────────────────────────────────────┘
+```
+
+## Priority Scoring Formula
+
+```
+Priority Score = (Impact × Urgency) / Effort
+
+Where:
+- Impact: 1-10 (business value)
+- Urgency: 1-10 (time sensitivity)
+- Effort: 1-10 (implementation cost, inverted)
+```
+
+### Impact Weights
+
+| Factor | Weight |
+|--------|--------|
+| Affects critical path (payment, booking) | +3 |
+| Reduces tech debt | +2 |
+| Improves DX | +2 |
+| Performance improvement | +2 |
+| Security fix | +4 |
+| Accessibility improvement | +2 |
+
+### Urgency Weights
+
+| Factor | Weight |
+|--------|--------|
+| Blocking someone | +4 |
+| Due date approaching | +3 |
+| Regression from recent change | +3 |
+| Market pressure (competitor) | +2 |
+| Slack mentions >3 | +2 |
+
+### Effort Estimation
+
+| Complexity | Effort Score | Time |
+|------------|--------------|------|
+| Trivial | 1 | <1 hour |
+| Low | 3 | 1-4 hours |
+| Medium | 5 | 1-2 days |
+| High | 7 | 3-5 days |
+| Massive | 10 | >1 week |
+
+## Decision Contract (Required)
+
+Every idea in READY state must have:
+
+```yaml
+---
+id: IDEA-XXX
+title: "Brief description"
+source: manual | repo | slack | market | metrics
+category: performance | dx | architecture | a11y | security
+status: ready
+priority_score: 8.5
+---
+
+## Decision Contract
+
+### Blast Radius
+- Files to modify: X
+- Files to create: Y
+- Downstream imports: Z
+- Risk Level: 🟢 LOW | 🟡 MEDIUM | 🔴 HIGH
+
+### PR Risk Score: X/10
+- Code gravity: X
+- Coupling: X
+- Churn history: X
+- Review complexity: X
+
+### Success Metric
+- Primary: "Specific, measurable outcome"
+- Secondary: "Supporting metric"
+- Timeline: "When we'll know if it worked"
+
+### Trust Level: L2
+- Buddy can: Draft implementation
+- Buddy cannot: Commit without review
+- Human gate: Review before merge
+
+### Effort Estimate
+- Implementation: X hours
+- Review: X hours
+- Testing: X hours
+- Total: X days
+```
+
+## Commands
+
+### View Ideas
+
+```bash
+/buddy ideas              # List top 5 by priority
+/buddy ideas all          # List all in backlog
+/buddy ideas ready        # List ideas ready for work
+```
+
+### Add Idea
+
+```bash
+/buddy idea "Description of improvement"
+```
+
+### Scan for Ideas
+
+```bash
+/buddy ideas scan         # Run all detection sources
+/buddy ideas scan repo    # Repo signals only
+/buddy ideas scan market  # Market trends only
+```
+
+### Work on Idea
+
+```bash
+/buddy ideas work IDEA-004  # Start implementation
+```
+
+### Review Completed
+
+```bash
+/buddy ideas review       # See completed drafts
+```
+
+## Weekly Digest
+
+Added to `/buddy` output on Mondays:
+
+```
+💡 IDEAS THIS WEEK
+├─ 📥 New: 3 ideas captured
+├─ ⭐ Top Priority: IDEA-003 (WCAG 2.2 Audit)
+│   └─ Impact: High | Effort: Medium | Score: 8.5
+├─ 🔄 In Progress: IDEA-001 (React 19 Compiler)
+└─ ✅ Completed: 1 (IDEA-002)
+
+Quick: /buddy ideas for full list
+```
+
+## Trust Boundaries
+
+| Action | Trust Level | Behavior |
+|--------|-------------|----------|
+| Capture idea | L1 | Silent, automatic |
+| Score idea | L1 | Silent, automatic |
+| Create implementation plan | L2 | Show as [DRAFT] |
+| Execute implementation | L2 | Present for review |
+| Commit changes | L3 | Requires confirmation |
+| Merge changes | L4 | Always requires approval |
+
+## Never Auto-Activate
+
+```
+⚠️ CRITICAL: Ideas are NEVER auto-executed to completion.
+
+- Ideas appear as [DRAFT] first
+- Require role-appropriate approval
+- Post-completion impact measurement is mandatory
+- Rules drafted from ideas are NEVER auto-enabled
+```
+
+## State Tracking
+
+Ideas tracked in `.cursor/buddy-state.json`:
+
+```json
+{
+  "ideation": {
+    "enabled": true,
+    "last_scan": "2025-12-28T12:00:00",
+    "backlog_count": 7,
+    "ready_count": 3,
+    "in_progress_count": 0,
+    "completed_this_week": 1,
+    "top_priority": "IDEA-003"
+  }
+}
+```

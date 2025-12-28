@@ -1,0 +1,201 @@
+---
+description: "Context-Warm Pre-fetch - Preloads relevant files before implementation starts"
+category: Intelligence
+globs: []
+alwaysApply: false
+---
+
+# 🔥 Context-Warm Pre-fetch
+
+Reduces implementation latency by preloading relevant files into the semantic index when a ticket is fetched.
+
+## Trigger
+
+Activates on:
+- `/jira-fetch {TICKET}`
+- `/gather-context {TICKET}`
+- Branch checkout with ticket ID pattern
+- Morning `/buddy` when priority ticket detected
+
+## Pre-fetch Logic
+
+```python
+def context_warm_prefetch(ticket_id):
+    """
+    Preload top 3 most relevant files for a ticket.
+    Goal: Zero latency when implementation starts.
+    """
+
+    # 1. Extract keywords from ticket
+    ticket = jira_get(ticket_id)
+    keywords = extract_keywords(ticket.summary + ticket.description)
+
+    # 2. Find related files by multiple signals
+    candidates = []
+
+    # Recent commits mentioning ticket
+    commits = git_log(grep=ticket_id)
+    for commit in commits:
+        candidates.extend(commit.files)
+
+    # Semantic search in codebase
+    for keyword in keywords[:5]:
+        results = codebase_search(keyword)
+        candidates.extend(results.files)
+
+    # High-gravity files in affected areas
+    affected_dirs = get_directories(candidates)
+    for dir in affected_dirs:
+        gravity_files = get_high_gravity_files(dir)
+        candidates.extend(gravity_files)
+
+    # 3. Score and rank candidates
+    scored = []
+    for file in set(candidates):
+        score = calculate_relevance(file, ticket, keywords)
+        scored.append((file, score))
+
+    # 4. Select top 3
+    top_files = sorted(scored, key=lambda x: x[1], reverse=True)[:3]
+
+    # 5. Preload into context
+    for file, score in top_files:
+        read_file(file)  # Warms semantic index
+        log_prefetch(file, score, ticket_id)
+
+    return top_files
+```
+
+## Relevance Scoring
+
+```
+File Relevance Score =
+  (modified_in_ticket_commits × 5) +
+  (keyword_match_in_path × 3) +
+  (high_import_count × 2) +
+  (mentioned_in_description × 2) +
+  (similar_ticket_pattern × 1) +
+  (recent_modification × 1)
+```
+
+### Scoring Factors
+
+| Factor | Weight | Description |
+|--------|--------|-------------|
+| Ticket commits | 5 | File was modified in commits mentioning this ticket |
+| Path match | 3 | File path contains ticket keywords |
+| Import count | 2 | High-gravity file (many imports) |
+| Description match | 2 | File mentioned in ticket description |
+| Similar pattern | 1 | Similar tickets touched this file |
+| Recent activity | 1 | Modified in last 7 days |
+
+## Output
+
+### Silent Pre-fetch (Default)
+
+Pre-fetch runs silently in background. No output unless requested.
+
+### Verbose Mode
+
+When `--verbose` flag used or in `/buddy` output:
+
+```
+👻 CONTEXT-WARM PRE-FETCH
+├─ Ticket: RBW-3459
+├─ Keywords: frictionless, checkout, payment
+├─ Top 3 Files Preloaded:
+│   1. ProtectionPackageCard.tsx (Score: 8.5)
+│   2. helpers.ts (Score: 6.2)
+│   3. LineItems.tsx (Score: 4.8)
+├─ Semantic Index: ✅ Warm
+└─ Ready for: Instant Composer responses
+```
+
+## Integration Points
+
+### With /jira-fetch
+
+```bash
+/jira-fetch RBW-3459
+# Automatically triggers:
+# 1. Fetch ticket details
+# 2. Pre-fetch relevant files
+# 3. Warm semantic index
+# 4. Ready for implementation
+```
+
+### With /buddy
+
+```
+🎯 Priority 1: RBW-3459 [Score: 9.2]
+├─ Why: Blocking @teammate
+├─ Blast Radius: 🟡 Medium
+├─ Ghost-Prep: ✅ Context pre-loaded
+│   ├─ ProtectionPackageCard.tsx
+│   ├─ helpers.ts
+│   └─ LineItems.tsx
+└─ Ready: Instant Composer responses
+```
+
+### With Branch Checkout
+
+```bash
+git checkout feat/RBW-3459-frictionless
+# Detected ticket: RBW-3459
+# Pre-fetching context...
+```
+
+## State Tracking
+
+```json
+{
+  "context_prefetch": {
+    "last_prefetch": "2025-12-28T14:05:00",
+    "prefetched_for_ticket": "RBW-3459",
+    "files_prefetched": [
+      "apps/rent-checkout/src/components/ProtectionPackageCard.tsx",
+      "apps/rent-checkout/src/helpers/helpers.ts",
+      "apps/rent-checkout/src/components/LineItems.tsx"
+    ],
+    "prefetch_hit_rate": 0.85,
+    "total_prefetches": 42,
+    "cache_warm": true
+  }
+}
+```
+
+## Performance Metrics
+
+Track effectiveness:
+
+| Metric | Target | Measurement |
+|--------|--------|-------------|
+| Hit rate | >80% | Files prefetched that were actually used |
+| Latency reduction | >50% | Time saved vs cold start |
+| False positives | <20% | Files prefetched but not used |
+
+## Configuration
+
+In `buddy-state.json`:
+
+```json
+{
+  "context_warm": {
+    "enabled": true,
+    "max_files": 3,
+    "min_score": 3.0,
+    "trigger_on_checkout": true,
+    "trigger_on_jira_fetch": true,
+    "trigger_on_buddy": true,
+    "verbose": false
+  }
+}
+```
+
+## Trust Level
+
+- **Detection**: L1 (silent, automatic)
+- **Pre-fetch**: L1 (read-only)
+- **State update**: L1 (local only)
+
+No confirmation required. Safe, read-only operation.

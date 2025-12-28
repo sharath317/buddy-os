@@ -1,0 +1,194 @@
+---
+description: ARIA labels, keyboard nav, focus management for interactive components
+category: Quality Gates
+globs: ["**/*.tsx"]
+alwaysApply: false
+severity: block
+---
+
+# Accessibility Standards (A11y)
+
+Accessibility violations are treated as **correctness issues**, not stylistic concerns.
+
+## Required Accessibility Rules
+
+### 1. Icon Buttons
+
+All IconButtons MUST have accessible labels:
+
+```tsx
+// ✅ REQUIRED - One of these patterns
+<OXIconButton
+  src="close"
+  ariaLabel="Close dialog"  // Required
+/>
+
+<OXIconButton
+  src="info"
+  aria-labelledby="info-label"  // Alternative
+/>
+
+// ❌ BLOCKED - Missing accessibility
+<OXIconButton src="close" />  // No label!
+```
+
+### 2. Images
+
+All images MUST include alt text:
+
+```tsx
+// ✅ REQUIRED
+<img src="car.jpg" alt="Red BMW sedan" />
+
+// ✅ Decorative images (empty alt allowed)
+<img src="decorative-line.svg" alt="" role="presentation" />
+
+// ❌ BLOCKED
+<img src="car.jpg" />  // Missing alt!
+```
+
+### 3. Modals and Dialogs
+
+Modals MUST:
+- Trap keyboard focus within the modal
+- Restore focus to trigger element on close
+- Be dismissible via ESC key
+- Have aria-modal="true" or role="dialog"
+
+```tsx
+// ✅ REQUIRED patterns
+<OXModal
+  isOpen={isOpen}
+  onClose={handleClose}  // Handles ESC
+  aria-labelledby="modal-title"
+>
+  <h2 id="modal-title">Modal Title</h2>
+  {/* Focus trapped here */}
+</OXModal>
+
+// ❌ BLOCKED - Missing focus management
+<div className="modal-overlay">
+  <div className="modal">...</div>  // No focus trap!
+</div>
+```
+
+### 4. Interactive Elements
+
+All interactive elements MUST be keyboard accessible:
+
+```tsx
+// ✅ REQUIRED - Native button (keyboard accessible)
+<button onClick={handleClick}>Click me</button>
+
+// ✅ REQUIRED - If using div, add role + keyboard
+<div
+  role="button"
+  tabIndex={0}
+  onClick={handleClick}
+  onKeyDown={(e) => e.key === 'Enter' && handleClick()}
+>
+  Click me
+</div>
+
+// ❌ BLOCKED - Not keyboard accessible
+<div onClick={handleClick}>Click me</div>  // Can't tab to this!
+```
+
+### 5. Form Inputs
+
+All form inputs MUST have associated labels:
+
+```tsx
+// ✅ REQUIRED
+<label htmlFor="email">Email</label>
+<input id="email" type="email" />
+
+// ✅ Using OXTextField (handles internally)
+<OXTextField
+  name="email"
+  label="Email"
+  type="email"
+/>
+
+// ❌ BLOCKED
+<input type="email" placeholder="Email" />  // Placeholder is NOT a label!
+```
+
+### 6. Color Contrast
+
+Text MUST meet WCAG contrast requirements:
+- Normal text: 4.5:1 minimum
+- Large text (>18pt): 3:1 minimum
+
+```tsx
+// ✅ Use semantic colors from design system
+color: ${color('primary')};      // Tested for contrast
+color: ${color('secondary')};    // Tested for contrast
+
+// ❌ WARN - Custom colors need verification
+color: #888888;  // May not meet contrast!
+```
+
+### 7. Focus Indicators
+
+Focus states MUST be visible:
+
+```tsx
+// ✅ REQUIRED - Visible focus
+&:focus-visible {
+  outline: 2px solid ${color('focusState')};
+  outline-offset: 2px;
+}
+
+// ❌ BLOCKED
+&:focus {
+  outline: none;  // Never remove focus without replacement!
+}
+```
+
+## Enforcement
+
+| Violation | Severity | Action |
+|-----------|----------|--------|
+| Missing aria-label on IconButton | 🔴 BLOCK | Cannot proceed |
+| Missing alt on image | 🔴 BLOCK | Cannot proceed |
+| Non-keyboard-accessible interactive | 🔴 BLOCK | Cannot proceed |
+| Modal without focus trap | 🔴 BLOCK | Cannot proceed |
+| Missing form label | 🔴 BLOCK | Cannot proceed |
+| Removed focus outline | 🔴 BLOCK | Cannot proceed |
+| Custom color (contrast unclear) | 🟡 WARN | Verify manually |
+
+## Quick Checklist
+
+When creating or modifying UI:
+
+- [ ] All IconButtons have `ariaLabel`
+- [ ] All images have `alt` text
+- [ ] Modals trap focus and handle ESC
+- [ ] All clickable elements are keyboard accessible
+- [ ] All form inputs have labels
+- [ ] Focus states are visible
+- [ ] Color contrast meets WCAG AA
+
+## Why This Matters
+
+| Without A11y Rules | With A11y Rules |
+|--------------------|-----------------|
+| PR feedback loop for a11y issues | Caught before commit |
+| Accessibility as afterthought | Accessibility by default |
+| Inconsistent UX for assistive tech | Reliable experience for all |
+| Legal/compliance risk | WCAG compliance built-in |
+
+## Exceptions
+
+If an accessibility attribute is intentionally omitted:
+1. Document the reason in a comment
+2. Get explicit user approval
+3. Ensure alternative accessibility is provided
+
+```tsx
+// ✅ Documented exception
+// A11y: Decorative icon, text provides context
+<OXIcon src="check" aria-hidden="true" />
+<OXTypography text="Success" />
+```
